@@ -10,6 +10,7 @@ export declare class TendioAuth<TRoles extends string = string> {
     readonly environment: 'development' | 'staging' | 'production';
     readonly logger: TendioLogger;
     readonly onUserAuthenticated?: (user: TendioUser<TRoles>) => Promise<void>;
+    readonly allowCredentialsLogin: boolean;
     readonly onBeforeLogout?: (req: unknown, res: unknown) => Promise<void>;
     readonly onUserNotFound?: (user: TendioUser<TRoles>) => Promise<{
         localUserId: string;
@@ -37,6 +38,10 @@ export declare class TendioAuth<TRoles extends string = string> {
         state: string;
     };
     exchangeCode(code: string, codeVerifier: string): Promise<{
+        user: TendioUser<TRoles>;
+        tokens: TendioTokenSet;
+    }>;
+    loginWithCredentials(email: string, password: string, acronym: string): Promise<{
         user: TendioUser<TRoles>;
         tokens: TendioTokenSet;
     }>;

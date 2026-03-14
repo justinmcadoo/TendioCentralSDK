@@ -26,6 +26,7 @@ export interface TendioAuthConfig<TRoles extends string = string> {
     localUserId: string;
     linkSsoId: boolean;
   } | null>;
+  allowCredentialsLogin?: boolean;
   logger?: TendioLogger;
 }
 
@@ -258,7 +259,8 @@ export type TendioAuthErrorCode =
   | 'insufficient_role'
   | 'insufficient_user_type'
   | 'insufficient_location'
-  | 'caregivers_not_allowed';
+  | 'caregivers_not_allowed'
+  | 'credentials_login_disabled';
 
 export class TendioAuthError extends Error {
   readonly code: TendioAuthErrorCode;

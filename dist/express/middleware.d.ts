@@ -24,6 +24,7 @@ export declare class TendioExpressAuth<TRoles extends string = string> {
     logout(options?: LogoutOptions): RequestHandler;
     refreshTokens(): RequestHandler;
     verifyWebhook(): RequestHandler;
+    handleCredentialsLogin(): RequestHandler;
     getAppConfig(): AppConfig;
     fetchUser(userId: string): Promise<import("./index.js").TendioStaffUser>;
     fetchAllUsers(): Promise<import("./index.js").TendioStaffUser[]>;

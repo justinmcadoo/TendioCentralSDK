@@ -115,6 +115,48 @@ export async function revokeToken(
   }
 }
 
+export async function exchangeCredentialsForTokens(
+  tokenUrl: string,
+  email: string,
+  password: string,
+  acronym: string,
+  clientId: string,
+  clientSecret: string,
+  logger: TendioLogger,
+): Promise<{ tokenSet: TendioTokenSet; rawIdToken: string }> {
+  const body = new URLSearchParams({
+    grant_type: 'password',
+    username: email,
+    password,
+    acronym,
+    client_id: clientId,
+    client_secret: clientSecret,
+  });
+
+  const response = await fetchWithRateLimitHandling(tokenUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  }, 'token_exchange_failed', logger);
+
+  const data = await response.json() as Record<string, unknown>;
+
+  const accessToken = data.access_token as string;
+  const refreshToken = data.refresh_token as string;
+  const idToken = data.id_token as string;
+  const expiresIn = (data.expires_in as number) || 3600;
+
+  return {
+    tokenSet: {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      id_token: idToken,
+      expires_at: Math.floor(Date.now() / 1000) + expiresIn,
+    },
+    rawIdToken: idToken,
+  };
+}
+
 async function fetchWithRateLimitHandling(
   url: string,
   init: RequestInit,

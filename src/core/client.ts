@@ -12,7 +12,7 @@ import type {
 import { TendioAuthError } from '../types.js';
 import { fetchAppConfig, validateRedirectUri, validateRoles } from './config.js';
 import { initJWKS, verifyIdToken } from './jwks.js';
-import { exchangeCodeForTokens, refreshAccessToken, revokeToken } from './tokens.js';
+import { exchangeCodeForTokens, exchangeCredentialsForTokens, refreshAccessToken, revokeToken } from './tokens.js';
 import { generateCodeVerifier, generateCodeChallenge, generateState } from './pkce.js';
 import { verifyWebhookPayload } from './webhook.js';
 import {
@@ -44,6 +44,7 @@ export class TendioAuth<TRoles extends string = string> {
   readonly environment: 'development' | 'staging' | 'production';
   readonly logger: TendioLogger;
   readonly onUserAuthenticated?: (user: TendioUser<TRoles>) => Promise<void>;
+  readonly allowCredentialsLogin: boolean;
   readonly onBeforeLogout?: (req: unknown, res: unknown) => Promise<void>;
   readonly onUserNotFound?: (user: TendioUser<TRoles>) => Promise<{
     localUserId: string;
@@ -65,6 +66,7 @@ export class TendioAuth<TRoles extends string = string> {
     this.environment = config.environment || 'production';
     this.logger = config.logger || defaultLogger;
     this.onUserAuthenticated = config.onUserAuthenticated;
+    this.allowCredentialsLogin = config.allowCredentialsLogin === true;
     this.onBeforeLogout = config.onBeforeLogout;
     this.onUserNotFound = config.onUserNotFound;
 
@@ -176,6 +178,39 @@ export class TendioAuth<TRoles extends string = string> {
     );
 
     const user = await verifyIdToken<TRoles>(rawIdToken, this.clientId, this.issuerUrl);
+
+    return { user, tokens: tokenSet };
+  }
+
+  async loginWithCredentials(
+    email: string,
+    password: string,
+    acronym: string,
+  ): Promise<{ user: TendioUser<TRoles>; tokens: TendioTokenSet }> {
+    if (!this.allowCredentialsLogin) {
+      throw new TendioAuthError(
+        'credentials_login_disabled',
+        'Credentials login is not enabled. Set allowCredentialsLogin: true in TendioAuthConfig to use this method.',
+      );
+    }
+
+    const config = this.getAppConfig();
+
+    const { tokenSet, rawIdToken } = await exchangeCredentialsForTokens(
+      config.tokenUrl,
+      email,
+      password,
+      acronym,
+      this.clientId,
+      this.clientSecret,
+      this.logger,
+    );
+
+    const user = await verifyIdToken<TRoles>(rawIdToken, this.clientId, this.issuerUrl);
+
+    if (this.onUserAuthenticated) {
+      await this.onUserAuthenticated(user);
+    }
 
     return { user, tokens: tokenSet };
   }

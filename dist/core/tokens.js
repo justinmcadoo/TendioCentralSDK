@@ -74,6 +74,35 @@ export async function revokeToken(revokeUrl, token, clientId, clientSecret, logg
         throw new TendioAuthError('token_revocation_failed', `Token revocation failed: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
     }
 }
+export async function exchangeCredentialsForTokens(tokenUrl, email, password, acronym, clientId, clientSecret, logger) {
+    const body = new URLSearchParams({
+        grant_type: 'password',
+        username: email,
+        password,
+        acronym,
+        client_id: clientId,
+        client_secret: clientSecret,
+    });
+    const response = await fetchWithRateLimitHandling(tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+    }, 'token_exchange_failed', logger);
+    const data = await response.json();
+    const accessToken = data.access_token;
+    const refreshToken = data.refresh_token;
+    const idToken = data.id_token;
+    const expiresIn = data.expires_in || 3600;
+    return {
+        tokenSet: {
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            id_token: idToken,
+            expires_at: Math.floor(Date.now() / 1000) + expiresIn,
+        },
+        rawIdToken: idToken,
+    };
+}
 async function fetchWithRateLimitHandling(url, init, errorCode, logger) {
     let response;
     try {

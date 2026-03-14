@@ -26,6 +26,7 @@ export interface TendioAuthConfig<TRoles extends string = string> {
         localUserId: string;
         linkSsoId: boolean;
     } | null>;
+    allowCredentialsLogin?: boolean;
     logger?: TendioLogger;
 }
 export interface TendioLogger {
@@ -205,7 +206,7 @@ export interface WebhookTestData {
     test_id: string;
     timestamp: string;
 }
-export type TendioAuthErrorCode = 'invalid_credentials' | 'application_disabled' | 'user_not_found' | 'sync_failed' | 'config_fetch_failed' | 'invalid_redirect_uri' | 'invalid_role' | 'token_exchange_failed' | 'token_refresh_failed' | 'token_revocation_failed' | 'jwks_fetch_failed' | 'token_verification_failed' | 'webhook_signature_invalid' | 'webhook_timestamp_invalid' | 'webhook_payload_malformed' | 'rate_limited' | 'network_error' | 'not_authenticated' | 'insufficient_role' | 'insufficient_user_type' | 'insufficient_location' | 'caregivers_not_allowed';
+export type TendioAuthErrorCode = 'invalid_credentials' | 'application_disabled' | 'user_not_found' | 'sync_failed' | 'config_fetch_failed' | 'invalid_redirect_uri' | 'invalid_role' | 'token_exchange_failed' | 'token_refresh_failed' | 'token_revocation_failed' | 'jwks_fetch_failed' | 'token_verification_failed' | 'webhook_signature_invalid' | 'webhook_timestamp_invalid' | 'webhook_payload_malformed' | 'rate_limited' | 'network_error' | 'not_authenticated' | 'insufficient_role' | 'insufficient_user_type' | 'insufficient_location' | 'caregivers_not_allowed' | 'credentials_login_disabled';
 export declare class TendioAuthError extends Error {
     readonly code: TendioAuthErrorCode;
     readonly statusCode?: number;

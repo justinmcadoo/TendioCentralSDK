@@ -381,6 +381,45 @@ export class TendioExpressAuth<TRoles extends string = string> {
     };
   }
 
+  handleCredentialsLogin(): RequestHandler {
+    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      try {
+        const { email, password, acronym } = req.body as Record<string, string>;
+
+        if (!email || !password || !acronym) {
+          res.status(400).json({
+            error: 'Missing required fields',
+            required: ['email', 'password', 'acronym'],
+            provided: {
+              email: !!email,
+              password: !!password,
+              acronym: !!acronym,
+            },
+          });
+          return;
+        }
+
+        const { user, tokens } = await this.auth.loginWithCredentials(email, password, acronym);
+
+        const session = getSession(req);
+        session[this.auth.sessionKey] = user;
+        session[`${this.auth.sessionKey}__tokens`] = tokens;
+
+        req.tendioUser = user as TendioUser;
+        req.tendioTokens = tokens;
+
+        next();
+      } catch (err) {
+        if (err instanceof TendioAuthError) {
+          const status = err.statusCode || 401;
+          res.status(status).json({ error: err.message, code: err.code });
+          return;
+        }
+        next(err);
+      }
+    };
+  }
+
   getAppConfig(): AppConfig {
     return this.auth.getAppConfig();
   }

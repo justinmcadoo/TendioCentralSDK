@@ -1,0 +1,78 @@
+Build ROPC login support for the SDK.
+
+Read src/core/client.ts, src/core/tokens.ts, 
+src/express/middleware.ts, and src/types.ts 
+before starting.
+
+--- WHAT TO BUILD ---
+
+Add loginWithCredentials() to the TendioAuth class 
+and a handleCredentialsLogin() Express middleware.
+
+This allows apps to authenticate users directly 
+with email, password, and company acronym — 
+without an SSO redirect.
+
+--- REQUIREMENTS ---
+
+1. Add to TendioAuthConfig in src/types.ts:
+   allowCredentialsLogin?: boolean
+   (must be explicitly set to true — default false)
+
+2. Add to TendioAuth class in src/core/client.ts:
+   async loginWithCredentials(
+     email: string,
+     password: string, 
+     acronym: string
+   ): Promise<TendioUser>
+
+   Behavior:
+   - If allowCredentialsLogin is false, throw a 
+     clear TendioAuthError explaining it must be 
+     enabled in config
+   - POST to the token endpoint with:
+     grant_type: 'password'
+     username: email
+     password: password
+     acronym: acronym (company identifier)
+     client_id: this.clientId
+     client_secret: this.clientSecret
+   - Verify the returned id_token via JWKS 
+     (reuse existing verifyIdToken)
+   - Call onUserAuthenticated if configured
+   - Return the TendioUser object
+   - On failure: throw TendioAuthError with 
+     appropriate error code
+
+3. Add to Express middleware in 
+   src/express/middleware.ts:
+   handleCredentialsLogin(): RequestHandler
+
+   Behavior:
+   - Read email, password, acronym from req.body
+   - Validate all three are present — return 400 
+     if any are missing
+   - Call loginWithCredentials()
+   - On success: store user in session, attach 
+     to req.tendioUser, call next()
+   - On failure: return 401 with error details
+
+--- SCOPE BOUNDARY ---
+
+Do NOT change any existing methods.
+Do NOT change the OAuth/PKCE flow.
+Do NOT bump the version yet — I will confirm 
+before that happens.
+
+--- VERIFICATION ---
+
+1. npm run build — zero errors
+2. Show the loginWithCredentials signature 
+   in client.ts
+3. Show the handleCredentialsLogin signature 
+   in middleware.ts
+4. Show the allowCredentialsLogin field in 
+   TendioAuthConfig
+5. Zero TypeScript errors
+
+Stop here. Do not push. Wait for go-ahead.
