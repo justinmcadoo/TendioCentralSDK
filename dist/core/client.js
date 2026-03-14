@@ -114,9 +114,6 @@ export class TendioAuth {
         const config = this.getAppConfig();
         const { tokenSet, rawIdToken } = await exchangeCodeForTokens(config.tokenUrl, code, this.redirectUri, this.clientId, this.clientSecret, codeVerifier, this.logger);
         const user = await verifyIdToken(rawIdToken, this.clientId, this.issuerUrl);
-        if (this.onUserAuthenticated) {
-            await this.onUserAuthenticated(user);
-        }
         return { user, tokens: tokenSet };
     }
     async refreshTokens(currentTokens) {

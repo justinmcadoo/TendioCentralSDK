@@ -177,10 +177,6 @@ export class TendioAuth<TRoles extends string = string> {
 
     const user = await verifyIdToken<TRoles>(rawIdToken, this.clientId, this.issuerUrl);
 
-    if (this.onUserAuthenticated) {
-      await this.onUserAuthenticated(user);
-    }
-
     return { user, tokens: tokenSet };
   }
 

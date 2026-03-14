@@ -66,6 +66,9 @@ export class TendioExpressAuth {
                         }
                     }
                 }
+                if (this.auth.onUserAuthenticated) {
+                    await this.auth.onUserAuthenticated(user);
+                }
                 session[this.auth.sessionKey] = user;
                 session[`${this.auth.sessionKey}__tokens`] = tokens;
                 delete session[oauthKey];
