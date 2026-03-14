@@ -56,6 +56,13 @@ export class TendioExpressAuth {
                     throw new TendioAuthError('token_exchange_failed', 'OAuth state mismatch — possible CSRF attack');
                 }
                 const { user, tokens } = await this.auth.exchangeCode(code, oauthData.codeVerifier);
+                const existingUser = session[this.auth.sessionKey];
+                if ((!existingUser || existingUser.sub !== user.sub) && this.auth.onUserNotFound) {
+                    const result = await this.auth.onUserNotFound(user);
+                    if (result && result.linkSsoId) {
+                        this.auth.logger.info(`[TendioAuth] onUserNotFound resolved to localUserId="${result.localUserId}" — linking SSO sub="${user.sub}"`);
+                    }
+                }
                 session[this.auth.sessionKey] = user;
                 session[`${this.auth.sessionKey}__tokens`] = tokens;
                 delete session[oauthKey];
@@ -196,6 +203,9 @@ export class TendioExpressAuth {
                     catch (err) {
                         this.auth.logger.warn(`[TendioAuth] Token revocation failed during logout: ${err instanceof Error ? err.message : String(err)}`);
                     }
+                }
+                if (this.auth.onBeforeLogout) {
+                    await this.auth.onBeforeLogout(req, res);
                 }
                 if (session) {
                     delete session[this.auth.sessionKey];

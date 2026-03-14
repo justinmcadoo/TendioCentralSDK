@@ -1,0 +1,74 @@
+Fix a bug in the logout() middleware and add the 
+onUserNotFound hook. Bump version to 1.0.4.
+
+--- BUG FIX: logout() middleware ---
+
+Current behavior: logout() calls res.json() before 
+calling next(), so consuming apps can never destroy 
+their local session in the callback — the response 
+is already sent.
+
+Fix: Add an onBeforeLogout hook to TendioAuthConfig 
+that runs after token revocation but before the 
+response is sent. This gives the consuming app a 
+chance to destroy its local session.
+
+Add to TendioAuthConfig:
+  onBeforeLogout?: (req: Request, res: Response) => 
+    Promise<void>;
+
+In the logout() middleware, after revoking tokens 
+and before sending the response:
+  if (this.config.onBeforeLogout) {
+    await this.config.onBeforeLogout(req, res);
+  }
+
+Then send the response.
+
+This way the consuming app can destroy its session 
+inside onBeforeLogout and the response is only sent 
+after that completes.
+
+--- NEW FEATURE: onUserNotFound hook ---
+
+Add to TendioAuthConfig:
+
+  onUserNotFound?: (user: TendioUser) => Promise<{
+    localUserId: string;
+    linkSsoId: boolean;
+  } | null>;
+
+How it works in handleCallback():
+After the token is verified and TendioUser is built:
+1. Check if a session already exists for this ssoId
+2. If not found, call onUserNotFound(user) if configured
+3. If it returns { localUserId, linkSsoId: true }:
+   - Use localUserId as the authenticated user
+   - Store user.sub as the linked ssoId on that record
+     (the app handles the actual DB update inside 
+     the hook — the SDK just passes the resolved 
+     user through to onUserAuthenticated)
+4. If it returns null: proceed normally to 
+   onUserAuthenticated which creates a new user
+
+Add both to TendioAuthConfig interface in types.ts.
+Document each with a JSDoc comment explaining 
+the use case.
+
+--- VERSION ---
+
+Bump package.json version to 1.0.4.
+
+--- VERIFICATION ---
+
+1. npm run build — zero errors
+2. Show the updated TendioAuthConfig interface 
+   with both new hooks
+3. Show the relevant section of logout() middleware 
+   where onBeforeLogout is called
+4. Show where onUserNotFound is called in 
+   handleCallback()
+5. Version confirmed as 1.0.4 in package.json
+
+Stop here. Do not commit or push — I will do 
+that via the Git panel.

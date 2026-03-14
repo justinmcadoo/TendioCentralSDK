@@ -117,6 +117,16 @@ export class TendioExpressAuth<TRoles extends string = string> {
 
         const { user, tokens } = await this.auth.exchangeCode(code, oauthData.codeVerifier);
 
+        const existingUser = session[this.auth.sessionKey] as TendioUser | undefined;
+        if ((!existingUser || existingUser.sub !== user.sub) && this.auth.onUserNotFound) {
+          const result = await this.auth.onUserNotFound(user as TendioUser<TRoles>);
+          if (result && result.linkSsoId) {
+            this.auth.logger.info(
+              `[TendioAuth] onUserNotFound resolved to localUserId="${result.localUserId}" — linking SSO sub="${user.sub}"`,
+            );
+          }
+        }
+
         session[this.auth.sessionKey] = user;
         session[`${this.auth.sessionKey}__tokens`] = tokens;
         delete session[oauthKey];
@@ -280,6 +290,10 @@ export class TendioExpressAuth<TRoles extends string = string> {
           } catch (err) {
             this.auth.logger.warn(`[TendioAuth] Token revocation failed during logout: ${err instanceof Error ? err.message : String(err)}`);
           }
+        }
+
+        if (this.auth.onBeforeLogout) {
+          await this.auth.onBeforeLogout(req, res);
         }
 
         if (session) {

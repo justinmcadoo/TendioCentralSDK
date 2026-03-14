@@ -8,6 +8,24 @@ export interface TendioAuthConfig<TRoles extends string = string> {
   scopes?: string[];
   sessionKey?: string;
   onUserAuthenticated?: (user: TendioUser<TRoles>) => Promise<void>;
+  /**
+   * Called during logout after tokens have been revoked but before the HTTP
+   * response is sent. Use this hook to destroy the consuming app's local
+   * session (e.g. call `req.session.destroy()`) so the cleanup completes
+   * before the client receives the response.
+   */
+  onBeforeLogout?: (req: unknown, res: unknown) => Promise<void>;
+  /**
+   * Called during the OAuth callback when no existing local user is found
+   * for the authenticated SSO identity. Return `{ localUserId, linkSsoId: true }`
+   * to resolve an existing local account and link the SSO identity to it,
+   * or return `null` to fall through to `onUserAuthenticated` which can
+   * create a brand-new user.
+   */
+  onUserNotFound?: (user: TendioUser<TRoles>) => Promise<{
+    localUserId: string;
+    linkSsoId: boolean;
+  } | null>;
   logger?: TendioLogger;
 }
 

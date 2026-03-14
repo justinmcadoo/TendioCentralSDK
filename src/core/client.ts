@@ -44,6 +44,11 @@ export class TendioAuth<TRoles extends string = string> {
   readonly environment: 'development' | 'staging' | 'production';
   readonly logger: TendioLogger;
   readonly onUserAuthenticated?: (user: TendioUser<TRoles>) => Promise<void>;
+  readonly onBeforeLogout?: (req: unknown, res: unknown) => Promise<void>;
+  readonly onUserNotFound?: (user: TendioUser<TRoles>) => Promise<{
+    localUserId: string;
+    linkSsoId: boolean;
+  } | null>;
 
   private appConfig: AppConfig | null = null;
   private issuerUrl: string = '';
@@ -60,6 +65,8 @@ export class TendioAuth<TRoles extends string = string> {
     this.environment = config.environment || 'production';
     this.logger = config.logger || defaultLogger;
     this.onUserAuthenticated = config.onUserAuthenticated;
+    this.onBeforeLogout = config.onBeforeLogout;
+    this.onUserNotFound = config.onUserNotFound;
 
     if (!this.clientId) throw new Error('clientId is required');
     if (!this.clientSecret) throw new Error('clientSecret is required');

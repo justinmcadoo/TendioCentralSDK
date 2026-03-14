@@ -26,6 +26,8 @@ export class TendioAuth {
     environment;
     logger;
     onUserAuthenticated;
+    onBeforeLogout;
+    onUserNotFound;
     appConfig = null;
     issuerUrl = '';
     refreshMutex = new Map();
@@ -40,6 +42,8 @@ export class TendioAuth {
         this.environment = config.environment || 'production';
         this.logger = config.logger || defaultLogger;
         this.onUserAuthenticated = config.onUserAuthenticated;
+        this.onBeforeLogout = config.onBeforeLogout;
+        this.onUserNotFound = config.onUserNotFound;
         if (!this.clientId)
             throw new Error('clientId is required');
         if (!this.clientSecret)

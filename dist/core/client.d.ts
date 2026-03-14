@@ -10,6 +10,11 @@ export declare class TendioAuth<TRoles extends string = string> {
     readonly environment: 'development' | 'staging' | 'production';
     readonly logger: TendioLogger;
     readonly onUserAuthenticated?: (user: TendioUser<TRoles>) => Promise<void>;
+    readonly onBeforeLogout?: (req: unknown, res: unknown) => Promise<void>;
+    readonly onUserNotFound?: (user: TendioUser<TRoles>) => Promise<{
+        localUserId: string;
+        linkSsoId: boolean;
+    } | null>;
     private appConfig;
     private issuerUrl;
     private refreshMutex;
