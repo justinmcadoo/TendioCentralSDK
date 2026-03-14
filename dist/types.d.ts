@@ -56,6 +56,7 @@ export interface TendioUser<TRoles extends string = string> {
     timezone_id: number;
     tendio_user_id: string;
     portal_url: string;
+    resolvedLocalUserId?: string;
 }
 export interface TendioLocation {
     id: number;

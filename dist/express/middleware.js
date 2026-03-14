@@ -59,8 +59,11 @@ export class TendioExpressAuth {
                 const existingUser = session[this.auth.sessionKey];
                 if ((!existingUser || existingUser.sub !== user.sub) && this.auth.onUserNotFound) {
                     const result = await this.auth.onUserNotFound(user);
-                    if (result && result.linkSsoId) {
-                        this.auth.logger.info(`[TendioAuth] onUserNotFound resolved to localUserId="${result.localUserId}" — linking SSO sub="${user.sub}"`);
+                    if (result) {
+                        user.resolvedLocalUserId = result.localUserId;
+                        if (result.linkSsoId) {
+                            this.auth.logger.info(`[TendioAuth] onUserNotFound resolved to localUserId="${result.localUserId}" — linking SSO sub="${user.sub}"`);
+                        }
                     }
                 }
                 session[this.auth.sessionKey] = user;

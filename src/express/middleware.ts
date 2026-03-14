@@ -120,10 +120,13 @@ export class TendioExpressAuth<TRoles extends string = string> {
         const existingUser = session[this.auth.sessionKey] as TendioUser | undefined;
         if ((!existingUser || existingUser.sub !== user.sub) && this.auth.onUserNotFound) {
           const result = await this.auth.onUserNotFound(user as TendioUser<TRoles>);
-          if (result && result.linkSsoId) {
-            this.auth.logger.info(
-              `[TendioAuth] onUserNotFound resolved to localUserId="${result.localUserId}" — linking SSO sub="${user.sub}"`,
-            );
+          if (result) {
+            user.resolvedLocalUserId = result.localUserId;
+            if (result.linkSsoId) {
+              this.auth.logger.info(
+                `[TendioAuth] onUserNotFound resolved to localUserId="${result.localUserId}" — linking SSO sub="${user.sub}"`,
+              );
+            }
           }
         }
 

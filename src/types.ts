@@ -63,6 +63,7 @@ export interface TendioUser<TRoles extends string = string> {
 
   tendio_user_id: string;
   portal_url: string;
+  resolvedLocalUserId?: string;
 }
 
 export interface TendioLocation {
