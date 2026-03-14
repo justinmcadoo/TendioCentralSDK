@@ -23,6 +23,7 @@ export class TendioAuth {
     webhookSecret;
     scopes;
     sessionKey;
+    environment;
     logger;
     onUserAuthenticated;
     appConfig = null;
@@ -36,6 +37,7 @@ export class TendioAuth {
         this.webhookSecret = config.webhookSecret || process.env.TENDIOCENTRAL_WEBHOOK_SECRET;
         this.scopes = config.scopes || DEFAULT_SCOPES;
         this.sessionKey = config.sessionKey || DEFAULT_SESSION_KEY;
+        this.environment = config.environment || 'production';
         this.logger = config.logger || defaultLogger;
         this.onUserAuthenticated = config.onUserAuthenticated;
         if (!this.clientId)
@@ -55,7 +57,7 @@ export class TendioAuth {
         return instance;
     }
     async init() {
-        this.appConfig = await fetchAppConfig(this.baseUrl, this.clientId, this.clientSecret, this.logger);
+        this.appConfig = await fetchAppConfig(this.baseUrl, this.clientId, this.clientSecret, this.logger, this.environment);
         validateRedirectUri(this.redirectUri, this.appConfig.redirectUris);
         this.issuerUrl = this.appConfig.ssoBaseUrl.replace(/\/$/, '');
         const issuerHttps = this.issuerUrl.replace(/^http:/, 'https:');

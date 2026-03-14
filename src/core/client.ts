@@ -41,6 +41,7 @@ export class TendioAuth<TRoles extends string = string> {
   readonly webhookSecret: string | undefined;
   readonly scopes: string[];
   readonly sessionKey: string;
+  readonly environment: 'development' | 'staging' | 'production';
   readonly logger: TendioLogger;
   readonly onUserAuthenticated?: (user: TendioUser<TRoles>) => Promise<void>;
 
@@ -56,6 +57,7 @@ export class TendioAuth<TRoles extends string = string> {
     this.webhookSecret = config.webhookSecret || process.env.TENDIOCENTRAL_WEBHOOK_SECRET;
     this.scopes = config.scopes || DEFAULT_SCOPES;
     this.sessionKey = config.sessionKey || DEFAULT_SESSION_KEY;
+    this.environment = config.environment || 'production';
     this.logger = config.logger || defaultLogger;
     this.onUserAuthenticated = config.onUserAuthenticated;
 
@@ -81,6 +83,7 @@ export class TendioAuth<TRoles extends string = string> {
       this.clientId,
       this.clientSecret,
       this.logger,
+      this.environment,
     );
 
     validateRedirectUri(this.redirectUri, this.appConfig.redirectUris);

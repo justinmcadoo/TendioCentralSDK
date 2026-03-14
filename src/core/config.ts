@@ -6,8 +6,9 @@ export async function fetchAppConfig(
   clientId: string,
   clientSecret: string,
   logger: TendioLogger,
+  environment: string = 'production',
 ): Promise<AppConfig> {
-  const url = `${baseUrl}/api/apps/config`;
+  const url = `${baseUrl}/api/apps/config?env=${environment}`;
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
   let response: Response;

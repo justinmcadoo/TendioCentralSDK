@@ -1,6 +1,6 @@
 import { TendioAuthError } from '../types.js';
-export async function fetchAppConfig(baseUrl, clientId, clientSecret, logger) {
-    const url = `${baseUrl}/api/apps/config`;
+export async function fetchAppConfig(baseUrl, clientId, clientSecret, logger, environment = 'production') {
+    const url = `${baseUrl}/api/apps/config?env=${environment}`;
     const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
     let response;
     try {

@@ -7,6 +7,7 @@ export declare class TendioAuth<TRoles extends string = string> {
     readonly webhookSecret: string | undefined;
     readonly scopes: string[];
     readonly sessionKey: string;
+    readonly environment: 'development' | 'staging' | 'production';
     readonly logger: TendioLogger;
     readonly onUserAuthenticated?: (user: TendioUser<TRoles>) => Promise<void>;
     private appConfig;
