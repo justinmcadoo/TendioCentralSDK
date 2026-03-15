@@ -1,6 +1,6 @@
 {
   "name": "@justinmcadoo/tendiocentral-sdk",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "TendioCentral SSO SDK — OAuth 2.0/OIDC authentication, webhook verification, and user management for Tendio-integrated applications",
   "type": "module",
   "main": "./dist/index.js",
@@ -35,7 +35,7 @@
     "jose": "^5.2.0"
   },
   "peerDependencies": {
-    "express": "^5.2.1"
+    "express": "^4.0.0 || ^5.0.0"
   },
   "peerDependenciesMeta": {
     "express": {
@@ -45,6 +45,7 @@
   "devDependencies": {
     "@types/express": "^4.17.0",
     "@types/node": "^20.0.0",
+    "express": "^4.21.0",
     "typescript": "^5.4.0",
     "vitest": "^3.2.4"
   },
