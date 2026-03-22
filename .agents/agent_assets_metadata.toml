@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "TVju91rwAeypK9bjReD9C"
+uri = "file://attached_assets/SDK-Route-Paths-Response.md"
+type = "text"
+title = "Response to TendioCentral Team — SDK Route Paths & Auto-Registration"
