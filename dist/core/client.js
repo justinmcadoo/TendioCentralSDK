@@ -27,6 +27,7 @@ export class TendioAuth {
     logger;
     onUserAuthenticated;
     webhookUrl;
+    ssoLoginUrl;
     autoRegisterUris;
     allowCredentialsLogin;
     onBeforeLogout;
@@ -44,6 +45,7 @@ export class TendioAuth {
         this.sessionKey = config.sessionKey || DEFAULT_SESSION_KEY;
         this.environment = config.environment || 'production';
         this.webhookUrl = config.webhookUrl;
+        this.ssoLoginUrl = config.ssoLoginUrl;
         this.autoRegisterUris = config.autoRegisterUris === true;
         this.logger = config.logger || defaultLogger;
         this.onUserAuthenticated = config.onUserAuthenticated;
@@ -71,26 +73,32 @@ export class TendioAuth {
         if (this.autoRegisterUris) {
             const needsRedirect = !this.appConfig.redirectUris.includes(this.redirectUri);
             const needsWebhook = !!this.webhookUrl && !this.appConfig.webhookConfigured;
-            if (needsRedirect) {
+            const needsHomepage = !this.appConfig.homepageUrl;
+            const needsSsoLogin = !!this.ssoLoginUrl && this.appConfig.ssoLoginUrl !== this.ssoLoginUrl;
+            const needsRegistration = needsRedirect || needsWebhook || needsHomepage || needsSsoLogin;
+            const derivedHomepageUrl = (() => {
                 try {
-                    this.logger.info('[TendioAuth] Redirect URI not registered — attempting auto-registration…');
-                    this.appConfig = await registerUris(this.baseUrl, this.clientId, this.clientSecret, this.environment, this.redirectUri, needsWebhook ? this.webhookUrl : undefined, this.logger);
+                    const parsed = new URL(this.redirectUri);
+                    return parsed.origin;
+                }
+                catch {
+                    return undefined;
+                }
+            })();
+            if (needsRegistration) {
+                try {
+                    this.logger.info('[TendioAuth] Auto-registering app URIs with TendioCentral…');
+                    this.appConfig = await registerUris(this.baseUrl, this.clientId, this.clientSecret, this.environment, {
+                        redirectUri: needsRedirect ? this.redirectUri : undefined,
+                        webhookUrl: needsWebhook ? this.webhookUrl : undefined,
+                        homepageUrl: needsHomepage ? derivedHomepageUrl : undefined,
+                        ssoLoginUrl: needsSsoLogin ? this.ssoLoginUrl : undefined,
+                    }, this.logger);
                     this.logger.info('[TendioAuth] Auto-registration successful');
                 }
                 catch (err) {
                     this.logger.warn(`[TendioAuth] Auto-registration failed: ${err instanceof Error ? err.message : String(err)}. ` +
                         'Register URIs manually in the TendioCentral dashboard.');
-                }
-            }
-            if (needsWebhook && (!needsRedirect || !this.appConfig.webhookConfigured)) {
-                try {
-                    this.logger.info('[TendioAuth] Webhook URL not registered — attempting auto-registration…');
-                    this.appConfig = await registerUris(this.baseUrl, this.clientId, this.clientSecret, this.environment, undefined, this.webhookUrl, this.logger);
-                    this.logger.info('[TendioAuth] Webhook URL auto-registration successful');
-                }
-                catch (err) {
-                    this.logger.warn(`[TendioAuth] Webhook URL auto-registration failed: ${err instanceof Error ? err.message : String(err)}. ` +
-                        'Configure the webhook URL manually in the TendioCentral dashboard.');
                 }
             }
         }

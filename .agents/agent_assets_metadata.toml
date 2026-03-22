@@ -6,3 +6,9 @@ id = "TVju91rwAeypK9bjReD9C"
 uri = "file://attached_assets/SDK-Route-Paths-Response.md"
 type = "text"
 title = "Response to TendioCentral Team — SDK Route Paths & Auto-Registration"
+
+[[outputs]]
+id = "LrAD8n_T5G3GEu66mV_gm"
+uri = "file://attached_assets/SDK-AutoRegister-Update-for-TendioCentral.md"
+type = "text"
+title = "Response to TendioCentral Team — Enhanced Auto-Registration"

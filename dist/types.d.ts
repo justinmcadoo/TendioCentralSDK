@@ -6,6 +6,7 @@ export interface TendioAuthConfig<TRoles extends string = string> {
     environment?: 'development' | 'staging' | 'production';
     webhookSecret?: string;
     webhookUrl?: string;
+    ssoLoginUrl?: string;
     autoRegisterUris?: boolean;
     scopes?: string[];
     sessionKey?: string;

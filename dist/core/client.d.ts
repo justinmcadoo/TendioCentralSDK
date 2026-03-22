@@ -11,6 +11,7 @@ export declare class TendioAuth<TRoles extends string = string> {
     readonly logger: TendioLogger;
     readonly onUserAuthenticated?: (user: TendioUser<TRoles>) => Promise<void>;
     readonly webhookUrl: string | undefined;
+    readonly ssoLoginUrl: string | undefined;
     readonly autoRegisterUris: boolean;
     readonly allowCredentialsLogin: boolean;
     readonly onBeforeLogout?: (req: unknown, res: unknown) => Promise<void>;

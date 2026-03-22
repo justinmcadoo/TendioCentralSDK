@@ -72,16 +72,22 @@ export async function registerUris(
   clientId: string,
   clientSecret: string,
   environment: string,
-  redirectUri?: string,
-  webhookUrl?: string,
+  options?: {
+    redirectUri?: string;
+    webhookUrl?: string;
+    homepageUrl?: string;
+    ssoLoginUrl?: string;
+  },
   logger?: TendioLogger,
 ): Promise<AppConfig> {
   const url = `${baseUrl}/api/apps/register-uris`;
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
   const body: Record<string, string> = { environment };
-  if (redirectUri) body.redirectUri = redirectUri;
-  if (webhookUrl) body.webhookUrl = webhookUrl;
+  if (options?.redirectUri) body.redirectUri = options.redirectUri;
+  if (options?.webhookUrl) body.webhookUrl = options.webhookUrl;
+  if (options?.homepageUrl) body.homepageUrl = options.homepageUrl;
+  if (options?.ssoLoginUrl) body.ssoLoginUrl = options.ssoLoginUrl;
 
   const response = await fetch(url, {
     method: 'POST',

@@ -32,14 +32,18 @@ export async function fetchAppConfig(baseUrl, clientId, clientSecret, logger, en
     logger.info(`[TendioAuth] Loaded config for "${config.appName}" (${config.environment})`);
     return config;
 }
-export async function registerUris(baseUrl, clientId, clientSecret, environment, redirectUri, webhookUrl, logger) {
+export async function registerUris(baseUrl, clientId, clientSecret, environment, options, logger) {
     const url = `${baseUrl}/api/apps/register-uris`;
     const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
     const body = { environment };
-    if (redirectUri)
-        body.redirectUri = redirectUri;
-    if (webhookUrl)
-        body.webhookUrl = webhookUrl;
+    if (options?.redirectUri)
+        body.redirectUri = options.redirectUri;
+    if (options?.webhookUrl)
+        body.webhookUrl = options.webhookUrl;
+    if (options?.homepageUrl)
+        body.homepageUrl = options.homepageUrl;
+    if (options?.ssoLoginUrl)
+        body.ssoLoginUrl = options.ssoLoginUrl;
     const response = await fetch(url, {
         method: 'POST',
         headers: {
