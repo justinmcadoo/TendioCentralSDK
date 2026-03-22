@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.replit
+replit.md
+attached_assets/
+*.tsbuildinfo
