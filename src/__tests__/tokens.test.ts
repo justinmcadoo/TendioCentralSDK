@@ -70,6 +70,7 @@ describe('refresh mutex', () => {
       allowsCaregivers: false,
       serverVersion: '1.0.0',
       webhookConfigured: false,
+      autoRegisterUris: true,
       roles: [],
     };
 

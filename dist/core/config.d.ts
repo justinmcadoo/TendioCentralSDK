@@ -5,7 +5,7 @@ export declare function registerUris(baseUrl: string, clientId: string, clientSe
     webhookUrl?: string;
     homepageUrl?: string;
     ssoLoginUrl?: string;
-}, logger?: TendioLogger): Promise<AppConfig>;
+}, logger?: TendioLogger): Promise<AppConfig | null>;
 export declare function validateRedirectUri(redirectUri: string, registeredUris: string[]): void;
 export declare function validateRoles(roleNames: string[], registeredRoles: Array<{
     name: string;

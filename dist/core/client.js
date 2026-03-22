@@ -70,7 +70,11 @@ export class TendioAuth {
     }
     async init() {
         this.appConfig = await fetchAppConfig(this.baseUrl, this.clientId, this.clientSecret, this.logger, this.environment);
-        if (this.autoRegisterUris) {
+        const autoRegister = this.appConfig.autoRegisterUris !== false && this.autoRegisterUris;
+        if (this.autoRegisterUris && this.appConfig.autoRegisterUris === false) {
+            this.logger.info('[TendioAuth] Auto-registration is disabled for this application in TendioCentral. Skipping URI registration.');
+        }
+        if (autoRegister) {
             const needsRedirect = !this.appConfig.redirectUris.includes(this.redirectUri);
             const needsWebhook = !!this.webhookUrl && !this.appConfig.webhookConfigured;
             const needsHomepage = !this.appConfig.homepageUrl;
@@ -88,13 +92,16 @@ export class TendioAuth {
             if (needsRegistration) {
                 try {
                     this.logger.info('[TendioAuth] Auto-registering app URIs with TendioCentral…');
-                    this.appConfig = await registerUris(this.baseUrl, this.clientId, this.clientSecret, this.environment, {
+                    const updatedConfig = await registerUris(this.baseUrl, this.clientId, this.clientSecret, this.environment, {
                         redirectUri: needsRedirect ? this.redirectUri : undefined,
                         webhookUrl: needsWebhook ? this.webhookUrl : undefined,
                         homepageUrl: needsHomepage ? derivedHomepageUrl : undefined,
                         ssoLoginUrl: needsSsoLogin ? this.ssoLoginUrl : undefined,
                     }, this.logger);
-                    this.logger.info('[TendioAuth] Auto-registration successful');
+                    if (updatedConfig) {
+                        this.appConfig = updatedConfig;
+                        this.logger.info('[TendioAuth] Auto-registration successful');
+                    }
                 }
                 catch (err) {
                     this.logger.warn(`[TendioAuth] Auto-registration failed: ${err instanceof Error ? err.message : String(err)}. ` +

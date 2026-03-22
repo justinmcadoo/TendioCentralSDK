@@ -79,7 +79,7 @@ export async function registerUris(
     ssoLoginUrl?: string;
   },
   logger?: TendioLogger,
-): Promise<AppConfig> {
+): Promise<AppConfig | null> {
   const url = `${baseUrl}/api/apps/register-uris`;
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
@@ -98,6 +98,17 @@ export async function registerUris(
     },
     body: JSON.stringify(body),
   });
+
+  if (response.status === 403) {
+    const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+    if (body.error === 'auto_registration_disabled') {
+      logger?.warn(
+        '[TendioAuth] Auto-registration is disabled for this application by an admin. ' +
+        'Register URIs manually in the TendioCentral dashboard, or ask an admin to enable auto-registration.',
+      );
+      return null;
+    }
+  }
 
   if (!response.ok) {
     const text = await response.text().catch(() => '');

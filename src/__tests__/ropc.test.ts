@@ -86,6 +86,7 @@ function setAppConfig(auth: TendioAuth) {
     allowsCaregivers: false,
     serverVersion: '1.0.0',
     webhookConfigured: false,
+    autoRegisterUris: true,
     roles: [],
   };
   (auth as any).issuerUrl = TEST_ISSUER;

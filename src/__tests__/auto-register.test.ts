@@ -22,6 +22,7 @@ const BASE_APP_CONFIG = {
   allowsCaregivers: false,
   serverVersion: '1.0.0',
   webhookConfigured: false,
+  autoRegisterUris: true,
   roles: [],
 };
 
@@ -298,5 +299,85 @@ describe('autoRegisterUris', () => {
     expect(body.homepageUrl).toBe('https://myapp.com');
     expect(body.ssoLoginUrl).toBe('https://myapp.com/api/auth/sso/login');
     expect(body.environment).toBe('development');
+  });
+
+  it('skips registration when server has autoRegisterUris set to false', async () => {
+    const serverDisabled = {
+      ...BASE_APP_CONFIG,
+      redirectUris: [],
+      autoRegisterUris: false,
+    };
+
+    const infoSpy = vi.fn();
+    const logger = { ...silentLogger, info: infoSpy };
+
+    const fetchSpy = mockFetch(serverDisabled);
+
+    await expect(
+      TendioAuth.fromConfig({
+        clientId: TEST_CLIENT_ID,
+        clientSecret: 'test-secret',
+        redirectUri: 'http://localhost:3000/callback',
+        tendiocentralUrl: 'https://central.example.com',
+        environment: 'development',
+        autoRegisterUris: true,
+        logger,
+      }),
+    ).rejects.toThrow('not registered');
+
+    expect(getRegisterCalls(fetchSpy).length).toBe(0);
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.stringContaining('disabled for this application'),
+    );
+  });
+
+  it('handles 403 auto_registration_disabled gracefully', async () => {
+    const configWithoutUri = { ...BASE_APP_CONFIG, redirectUris: [] };
+
+    const warnSpy = vi.fn();
+    const logger = { ...silentLogger, warn: warnSpy };
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      const urlStr = typeof url === 'string' ? url : url.toString();
+
+      if (urlStr.includes('/api/apps/config')) {
+        return new Response(JSON.stringify(configWithoutUri), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (urlStr.includes('/api/apps/register-uris')) {
+        return new Response(
+          JSON.stringify({ error: 'auto_registration_disabled', error_description: 'Disabled by admin' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+
+      if (urlStr.includes('/jwks')) {
+        return new Response(JSON.stringify({ keys: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response('Not Found', { status: 404 });
+    });
+
+    await expect(
+      TendioAuth.fromConfig({
+        clientId: TEST_CLIENT_ID,
+        clientSecret: 'test-secret',
+        redirectUri: 'http://localhost:3000/callback',
+        tendiocentralUrl: 'https://central.example.com',
+        environment: 'development',
+        autoRegisterUris: true,
+        logger,
+      }),
+    ).rejects.toThrow('not registered');
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('disabled for this application by an admin'),
+    );
   });
 });

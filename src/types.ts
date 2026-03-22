@@ -129,6 +129,7 @@ export interface AppConfig {
   allowsCaregivers: boolean;
   serverVersion: string;
   webhookConfigured: boolean;
+  autoRegisterUris: boolean;
   roles: AppRole[];
 }
 

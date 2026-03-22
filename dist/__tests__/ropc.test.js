@@ -77,6 +77,7 @@ function setAppConfig(auth) {
         allowsCaregivers: false,
         serverVersion: '1.0.0',
         webhookConfigured: false,
+        autoRegisterUris: true,
         roles: [],
     };
     auth.issuerUrl = TEST_ISSUER;

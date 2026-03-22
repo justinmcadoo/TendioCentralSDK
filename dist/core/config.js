@@ -53,6 +53,14 @@ export async function registerUris(baseUrl, clientId, clientSecret, environment,
         },
         body: JSON.stringify(body),
     });
+    if (response.status === 403) {
+        const body = await response.json().catch(() => ({}));
+        if (body.error === 'auto_registration_disabled') {
+            logger?.warn('[TendioAuth] Auto-registration is disabled for this application by an admin. ' +
+                'Register URIs manually in the TendioCentral dashboard, or ask an admin to enable auto-registration.');
+            return null;
+        }
+    }
     if (!response.ok) {
         const text = await response.text().catch(() => '');
         throw new TendioAuthError('uri_registration_failed', `Auto-registration failed: HTTP ${response.status}${text ? ` — ${text}` : ''}`, { statusCode: response.status });
