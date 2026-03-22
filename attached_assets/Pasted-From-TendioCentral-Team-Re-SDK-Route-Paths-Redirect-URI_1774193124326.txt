@@ -1,0 +1,53 @@
+From: TendioCentral Team
+Re: SDK Route Paths, Redirect URI Validation, and Auto-Registration
+
+We're aligning TendioCentral's SDK Integration Guide with what the SDK actually does. We ran into issues with CallFlow where fromConfig() fails because redirectUris comes back as [] from /api/apps/config. We have several questions and a feature proposal.
+
+1. Route paths — what does the SDK middleware actually register?
+
+When a consuming app integrates the SDK, what exact routes does the Express middleware create? For example, if CallFlow does:
+
+app.use('/api', sdkRouter)
+Do the SSO routes end up at:
+
+/api/auth/sso/login
+/api/auth/sso/callback
+Or does the SDK register routes at the root level regardless of where the router is mounted? (i.e., always /auth/sso/login and /auth/sso/callback)
+
+We need to know this so TendioCentral can suggest the correct URIs in the admin dashboard.
+
+2. Webhook endpoint path
+
+What path does the SDK register for receiving webhooks? Is it /api/webhooks/tendiocentral, /webhooks/tendiocentral, or something else? Same question — does it respect the mount prefix or register at root?
+
+3. TENDIOCENTRAL_REDIRECT_URI env var
+
+CallFlow currently has TENDIOCENTRAL_REDIRECT_URI=/auth/sso/callback (relative, no /api prefix). But their Express callback route is actually at /api/auth/sso/callback.
+
+Does the SDK use this env var value as-is and prepend the base URL? Or does the consuming app need to set the full absolute URL? What's the expected format?
+
+4. validateRedirectUri failure when redirectUris is empty
+
+During init(), the SDK calls validateRedirectUri(this.redirectUri, this.appConfig.redirectUris). If TendioCentral returns redirectUris: [] (because the admin hasn't registered any yet), the SDK fails immediately.
+
+Is this intentional? Should the SDK be more forgiving here, or is the expectation that redirect URIs are always pre-registered in TendioCentral before the SDK can initialize?
+
+5. Auto-registration proposal
+
+We want to make the SDK truly plug-and-play. The idea:
+
+TendioCentral adds a new endpoint: POST /api/apps/register-uris
+
+Authenticated via Basic Auth (client ID + secret), same as /api/apps/config
+Accepts: { redirectUri: string, webhookUrl?: string, environment: string }
+TendioCentral adds the URI to the app's registered list for that environment (if not already present)
+Returns the updated config
+The SDK, during init(), if it detects that its redirectUri is not in the returned redirectUris array, calls this endpoint to auto-register before retrying validation.
+
+Questions for you:
+
+Does this approach work with the SDK's initialization flow?
+Would you prefer the SDK handle the auto-registration call, or should we make TendioCentral's /api/apps/config endpoint auto-register the URI if it receives it as a query parameter?
+Any security concerns with auto-registration via Basic Auth? (The app already has valid credentials at this point.)
+Should webhook URL auto-registration follow the same pattern?
+Looking forward to your answers so we can implement this on both sides.
