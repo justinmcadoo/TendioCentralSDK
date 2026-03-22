@@ -1,8 +1,8 @@
 # TendioCentral SDK Integration Guide
 
 **Package:** `@justinmcadoo/tendiocentral-sdk`
-**Current Version:** 1.0.8
-**Requires:** Node.js, Express 4.x, express-session
+**Current Version:** 1.1.0
+**Requires:** Node.js 18+, Express 4.x or 5.x, express-session
 
 ---
 
@@ -23,7 +23,6 @@ Set the following environment variables in your application:
 | `TENDIOCENTRAL_CLIENT_ID` | Yes | Your app's client ID (auto-read by the SDK) |
 | `TENDIOCENTRAL_CLIENT_SECRET` | Yes | Your app's client secret |
 | `TENDIOCENTRAL_URL` | Yes | TendioCentral server URL (auto-read by the SDK if not passed in config) |
-| `TENDIOCENTRAL_REDIRECT_URI` | Yes | The OAuth callback URL registered in TendioCentral |
 | `TENDIOCENTRAL_WEBHOOK_SECRET` | No | Secret for verifying webhook payloads |
 | `ENVIRONMENT` | No | `development`, `staging`, or `production` (defaults to `production`) |
 | `SESSION_SECRET` | Yes | Secret for express-session |
@@ -34,15 +33,20 @@ Set the following environment variables in your application:
 
 ## 3. TendioCentral Portal Configuration
 
-In the TendioCentral portal, register your application with:
+In the TendioCentral portal, create your application to obtain `CLIENT_ID` and `CLIENT_SECRET`.
+
+**With auto-registration enabled (recommended):** The SDK automatically registers your app's URLs (redirect URI, homepage URL, SSO login URL, webhook URL) with TendioCentral on first startup. No manual URL entry in the dashboard is required. See [Section 5a: Auto-Registration](#5a-auto-registration) for details.
+
+**Without auto-registration:** Manually configure the following in the portal:
 
 | Field | Value |
 |---|---|
 | Homepage URL | `https://your-app.com` |
 | SSO Login URL | The full URL that initiates the OAuth flow (e.g., `https://your-app.com/api/auth/sso/login`) |
 | Redirect URIs | The OAuth callback URL (e.g., `https://your-app.com/auth/callback`) |
+| Webhook URL | The URL that receives webhook events (e.g., `https://your-app.com/api/webhooks/tendiocentral`) |
 
-**Common mistake:** The SSO Login URL must match the exact route path where your login handler is mounted. If your SSO router is mounted at `/api/auth/sso`, the login URL is `/api/auth/sso/login`, not `/auth/sso/login`.
+**Note:** The SDK does not register any routes itself. It provides middleware functions (`initiateLogin()`, `handleCallback()`, `logout()`, `verifyWebhook()`) that you mount on whatever routes you choose. The URLs you configure must match where you mount the middleware.
 
 ---
 
@@ -99,6 +103,11 @@ export async function initializeAuth() {
     webhookSecret: process.env.TENDIOCENTRAL_WEBHOOK_SECRET,
     environment: (process.env.ENVIRONMENT as any) || 'development',
 
+    // Auto-registration (see Section 5a)
+    autoRegisterUris: true,
+    ssoLoginUrl: 'https://your-app.com/api/auth/sso/login',
+    webhookUrl: 'https://your-app.com/api/webhooks/tendiocentral',
+
     // See Section 6 for hook implementations
     onUserNotFound: async (user: TendioUser) => { /* ... */ },
     onUserAuthenticated: async (user: TendioUser) => { /* ... */ },
@@ -131,6 +140,71 @@ async function main() {
 
 main();
 ```
+
+---
+
+## 5a. Auto-Registration
+
+The SDK can automatically register your app's URLs with TendioCentral during initialization, eliminating the need for manual URL entry in the admin dashboard.
+
+### How it works
+
+When `autoRegisterUris: true` is set in the config, the SDK checks the app config returned by TendioCentral during `init()`. If any URLs are missing, it sends a single `POST /api/apps/register-uris` request to register them:
+
+| URL | Source | When registered |
+|---|---|---|
+| Redirect URI | `redirectUri` config option | When not in the registered URIs list |
+| Webhook URL | `webhookUrl` config option | When `webhookConfigured` is `false` |
+| Homepage URL | Auto-derived from `redirectUri` origin | When `homepageUrl` is not set |
+| SSO Login URL | `ssoLoginUrl` config option | When `ssoLoginUrl` is not set or differs |
+
+**Homepage URL derivation:** The SDK extracts the origin from your `redirectUri` automatically:
+- `https://myapp.com/auth/callback` → `https://myapp.com`
+- `http://localhost:3000/auth/callback` → `http://localhost:3000`
+
+### Per-environment registration
+
+All URLs are registered per-environment. When your app starts in development, it registers development URLs. When it starts in production, it registers production URLs. Each environment maintains its own set of URLs independently.
+
+### Server-controlled toggle
+
+TendioCentral provides an `autoRegisterUris` setting per application (defaults to `true`). The server value takes priority:
+
+- Server `false` → registration is skipped, even if the local config has `autoRegisterUris: true`
+- Server `true` + local config `true` → registration proceeds
+- Server `true` + local config `false` (or not set) → registration is skipped
+
+An admin can disable auto-registration at any time from the TendioCentral dashboard.
+
+### Error handling
+
+- If auto-registration fails, the SDK logs a warning and continues. The `validateRedirectUri` check still runs — if the redirect URI is missing, initialization will fail with a clear error.
+- If the server returns `403 auto_registration_disabled`, the SDK logs a warning and continues normally.
+- Registration is idempotent — calling it with already-registered URLs is a no-op.
+
+### Example config
+
+```typescript
+await TendioAuth.fromConfig({
+  clientSecret: process.env.TENDIOCENTRAL_CLIENT_SECRET!,
+  redirectUri: 'https://myapp.com/auth/callback',
+  ssoLoginUrl: 'https://myapp.com/api/auth/sso/login',
+  webhookUrl: 'https://myapp.com/api/webhooks/tendiocentral',
+  webhookSecret: process.env.TENDIOCENTRAL_WEBHOOK_SECRET,
+  autoRegisterUris: true,
+  environment: 'production',
+});
+```
+
+### Setup flow with auto-registration
+
+| Step | Who | What |
+|---|---|---|
+| 1 | Admin | Creates app in TendioCentral dashboard → gets `CLIENT_ID` + `CLIENT_SECRET` |
+| 2 | Developer | Sets env vars (`CLIENT_ID`, `CLIENT_SECRET`, `TENDIOCENTRAL_URL`) |
+| 3 | Developer | Configures SDK with `redirectUri`, `ssoLoginUrl`, `webhookUrl`, `autoRegisterUris: true` |
+| 4 | SDK (auto) | On first startup: registers all URLs with TendioCentral |
+| 5 | Done | App is fully configured — admin can verify or modify in dashboard |
 
 ---
 
@@ -443,7 +517,7 @@ Mount the webhook router:
 app.use('/api/webhooks/tendiocentral', tendioWebhookRouter);
 ```
 
-Then register `https://your-app.com/api/webhooks/tendiocentral` as the webhook URL in the TendioCentral portal.
+If using auto-registration, the webhook URL is registered automatically. Otherwise, register `https://your-app.com/api/webhooks/tendiocentral` manually in the TendioCentral portal.
 
 ---
 
@@ -546,13 +620,39 @@ Your sessions table needs:
 
 ---
 
-## 14. Available SDK Methods
+## 14. Configuration Reference
+
+### `TendioAuth.fromConfig(config)` Options
+
+| Option | Type | Required | Description |
+|---|---|---|---|
+| `clientId` | string | No | App client ID (auto-read from `TENDIOCENTRAL_CLIENT_ID` env var) |
+| `clientSecret` | string | Yes | App client secret |
+| `redirectUri` | string | Yes | Full absolute OAuth callback URL |
+| `tendiocentralUrl` | string | No | TendioCentral server URL (auto-read from `TENDIOCENTRAL_URL` env var) |
+| `environment` | string | No | `'development'`, `'staging'`, or `'production'` (defaults to `'production'`) |
+| `webhookSecret` | string | No | Secret for verifying webhook payloads (auto-read from `TENDIOCENTRAL_WEBHOOK_SECRET` env var) |
+| `webhookUrl` | string | No | Webhook endpoint URL (used for auto-registration) |
+| `ssoLoginUrl` | string | No | SSO login initiation URL (used for auto-registration) |
+| `autoRegisterUris` | boolean | No | Enable auto-registration of URLs during init (default `false`) |
+| `allowCredentialsLogin` | boolean | No | Enable ROPC login via `loginWithCredentials()` (default `false`) |
+| `scopes` | string[] | No | OAuth scopes (default: `['openid', 'profile', 'email', 'roles']`) |
+| `sessionKey` | string | No | Session storage key prefix (default: `'tendioUser'`) |
+| `onUserNotFound` | function | No | Called when no local user exists for the SSO identity |
+| `onUserAuthenticated` | function | No | Called after every successful login |
+| `onBeforeLogout` | function | No | Called during logout after token revocation |
+| `logger` | object | No | Custom logger with `info`, `warn`, `error` methods |
+
+---
+
+## 15. Available SDK Methods
 
 | Method | Description |
 |---|---|
 | `TendioAuth.fromConfig(config)` | Initialize the SDK (async) |
 | `getAuth().initiateLogin()` | Middleware that redirects to TendioCentral login |
 | `getAuth().handleCallback()` | Middleware that processes the OAuth callback |
+| `getAuth().handleCredentialsLogin()` | Middleware for ROPC login (requires `allowCredentialsLogin: true`) |
 | `getAuth().logout(options?)` | Middleware that revokes tokens and logs out |
 | `getAuth().requireAuth(options?)` | Middleware that blocks unauthenticated requests |
 | `getAuth().requireRole(...roles)` | Middleware that requires specific roles |
@@ -569,7 +669,7 @@ Your sessions table needs:
 
 ---
 
-## 15. TendioUser Object
+## 16. TendioUser Object
 
 After authentication, `req.tendioUser` contains:
 
@@ -599,23 +699,30 @@ After authentication, `req.tendioUser` contains:
 
 ---
 
-## 16. Checklist
+## 17. Checklist
+
+### With Auto-Registration (recommended)
 
 - [ ] Install the SDK: `npm install @justinmcadoo/tendiocentral-sdk`
-- [ ] Set environment variables: `TENDIOCENTRAL_CLIENT_ID`, `TENDIOCENTRAL_CLIENT_SECRET`, `TENDIOCENTRAL_URL`, `TENDIOCENTRAL_REDIRECT_URI`, `SESSION_SECRET`
+- [ ] Create app in TendioCentral dashboard (get `CLIENT_ID` and `CLIENT_SECRET`)
+- [ ] Set environment variables: `TENDIOCENTRAL_CLIENT_ID`, `TENDIOCENTRAL_CLIENT_SECRET`, `TENDIOCENTRAL_URL`, `SESSION_SECRET`
 - [ ] Optionally set: `TENDIOCENTRAL_WEBHOOK_SECRET`, `ENVIRONMENT`
 - [ ] Configure express-session with a persistent store (PostgreSQL recommended)
 - [ ] Create auth.ts with `initializeAuth()`, `getAuth()`, lifecycle hooks
+- [ ] Set `autoRegisterUris: true`, `redirectUri`, `ssoLoginUrl`, and optionally `webhookUrl` in config
 - [ ] Call `initializeAuth()` at app startup before route registration
 - [ ] Create SSO router with `/login`, `/callback`, `/logout` routes
 - [ ] Mount SSO router (e.g., `app.use('/api/auth/sso', tendioSsoRouter)`)
 - [ ] Add redirect URI forwarding if needed (`/auth/callback` -> `/api/auth/sso/callback`)
 - [ ] Mount `refreshTokens()` middleware on all protected routes
 - [ ] Set up webhook router and mount it (optional but recommended)
-- [ ] Register in TendioCentral portal: Homepage URL, SSO Login URL, Redirect URIs
-- [ ] Register webhook URL in TendioCentral portal (if using webhooks)
 - [ ] Add users table with `sso_id` column
 - [ ] Add sessions table with `sid`, `sess`, `expire` columns
 - [ ] Build login page that redirects to `/api/auth/sso/login`
 - [ ] Build auth check endpoint that reads `session.userId`
 - [ ] Test: login flow, callback, session persistence, logout, token refresh
+
+### Without Auto-Registration
+
+- [ ] All steps above, but skip `autoRegisterUris`, `ssoLoginUrl`, `webhookUrl` in config
+- [ ] Manually register in TendioCentral portal: Homepage URL, SSO Login URL, Redirect URIs, Webhook URL
