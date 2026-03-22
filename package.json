@@ -1,6 +1,6 @@
 {
   "name": "@justinmcadoo/tendiocentral-sdk",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "TendioCentral SSO SDK — OAuth 2.0/OIDC authentication, webhook verification, and user management for Tendio-integrated applications",
   "type": "module",
   "main": "./dist/index.js",

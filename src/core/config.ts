@@ -67,6 +67,44 @@ export async function fetchAppConfig(
   return config;
 }
 
+export async function registerUris(
+  baseUrl: string,
+  clientId: string,
+  clientSecret: string,
+  environment: string,
+  redirectUri?: string,
+  webhookUrl?: string,
+  logger?: TendioLogger,
+): Promise<AppConfig> {
+  const url = `${baseUrl}/api/apps/register-uris`;
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+  const body: Record<string, string> = { environment };
+  if (redirectUri) body.redirectUri = redirectUri;
+  if (webhookUrl) body.webhookUrl = webhookUrl;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${credentials}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new TendioAuthError(
+      'uri_registration_failed',
+      `Auto-registration failed: HTTP ${response.status}${text ? ` — ${text}` : ''}`,
+      { statusCode: response.status },
+    );
+  }
+
+  return await response.json() as AppConfig;
+}
+
 export function validateRedirectUri(redirectUri: string, registeredUris: string[]): void {
   if (!registeredUris.includes(redirectUri)) {
     throw new TendioAuthError(

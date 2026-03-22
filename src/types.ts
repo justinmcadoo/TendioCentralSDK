@@ -5,6 +5,8 @@ export interface TendioAuthConfig<TRoles extends string = string> {
   tendiocentralUrl?: string;
   environment?: 'development' | 'staging' | 'production';
   webhookSecret?: string;
+  webhookUrl?: string;
+  autoRegisterUris?: boolean;
   scopes?: string[];
   sessionKey?: string;
   onUserAuthenticated?: (user: TendioUser<TRoles>) => Promise<void>;
@@ -260,7 +262,8 @@ export type TendioAuthErrorCode =
   | 'insufficient_user_type'
   | 'insufficient_location'
   | 'caregivers_not_allowed'
-  | 'credentials_login_disabled';
+  | 'credentials_login_disabled'
+  | 'uri_registration_failed';
 
 export class TendioAuthError extends Error {
   readonly code: TendioAuthErrorCode;
